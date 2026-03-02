@@ -8,6 +8,3 @@
 
 # Nix stuff
 .direnv/**/*
-
-# Old FindIT source
-findit-original/
