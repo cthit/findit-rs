@@ -1,50 +1,46 @@
-# Development
+# findIT
 
-Your new bare-bones project includes minimal organization with a single `main.rs` file and a few assets.
+findIT is a service discovery tool for finding various IT division services that are hosted and/or made by students of the Chalmers IT Student Division.
 
-```
-project/
-├─ assets/ # Any assets that are used by the app should be placed here
-├─ src/
-│  ├─ main.rs # main.rs is the entry point to your application and currently contains all components for the app
-├─ Cargo.toml # The Cargo.toml file defines the dependencies and feature flags for your project
-```
+## How it works
 
-### Automatic Tailwind (Dioxus 0.7+)
+The application queries the local Docker socket for running containers that have specific labels. It groups these services by category and displays them in a web interface.
 
-As of Dioxus 0.7, there no longer is a need to manually install tailwind. Simply `dx serve` and you're good to go!
+## Usage
 
-Automatic tailwind is supported by checking for a file called `tailwind.css` in your app's manifest directory (next to Cargo.toml). To customize the file, use the dioxus.toml:
+### For Services
 
-```toml
-[application]
-tailwind_input = "my.css"
-tailwind_output = "assets/out.css" # also customize the location of the out file!
-```
+To make a service appear in findIT, add the following labels to your Docker container:
 
-### Tailwind Manual Install
+| Label | Description | Required |
+|-------|-------------|----------|
+| `findit.enable` | Set to `true` to opt-in. | Yes |
+| `findit.title` | The name of the service. | Yes |
+| `findit.url` | The URL to access the service. | Yes |
+| `findit.description` | A brief description of the service. | Yes |
+| `findit.category` | The category to group the service under. | Yes |
+| `findit.github_url` | URL to the source code. | No |
+| `findit.icon` | Icon name (maps to `assets/images/{icon}.svg`). | No |
 
-To use tailwind plugins or manually customize tailwind, you can can install the Tailwind CLI and use it directly.
+### Running findIT
 
-### Tailwind
-1. Install npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-2. Install the Tailwind CSS CLI: https://tailwindcss.com/docs/installation/tailwind-cli
-3. Run the following command in the root of the project to start the Tailwind CSS compiler:
+#### Prerequisites
+- Rust and Cargo
+- [Dioxus CLI](https://dioxuslabs.com/learn/0.6/getting_started) (`cargo install dioxus-cli`)
+- Docker (with access to the Docker socket)
 
-```bash
-npx @tailwindcss/cli -i ./input.css -o ./assets/tailwind.css --watch
-```
-
-### Serving Your App
-
-Run the following command in the root of your project to start developing with the default platform:
+#### Development
+To start the development server:
 
 ```bash
-dx serve --platform web
+dx serve
 ```
 
-To run for a different platform, use the `--platform platform` flag. E.g.
+#### Production
+To build for production:
+
 ```bash
-dx serve --platform desktop
+dx build --release
 ```
 
+The application requires access to `/var/run/docker.sock` to function.

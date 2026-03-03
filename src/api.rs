@@ -1,17 +1,10 @@
 use crate::models::{Category, Service};
 use dioxus::prelude::*;
 
-/// Query the Docker socket for all running containers that have the
-/// `findit.enable=true` label, then map their labels into `Vec<Category>`.
+/// Fetches services from Docker containers with `findit.enable=true`.
 ///
-/// Label schema (all prefixed with `findit.`):
-///   findit.enable      = "true"   — required opt-in marker
-///   findit.title       = "..."    — required
-///   findit.url         = "..."    — required
-///   findit.description = "..."    — required
-///   findit.category    = "..."    — required (used for grouping)
-///   findit.github_url  = "..."    — optional
-///   findit.icon        = "..."    — optional (maps to /images/{icon}.svg)
+/// Labels: `title`, `url`, `description`, `category`.
+/// Optional labels: `github_url`, `icon`.
 #[server]
 pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
     use bollard::query_parameters::ListContainersOptionsBuilder;
