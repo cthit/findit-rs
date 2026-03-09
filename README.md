@@ -20,7 +20,7 @@ To make a service appear in findIT, add the following labels to your Docker cont
 | `findit.description` | A brief description of the service. | Yes |
 | `findit.category` | The category to group the service under. | Yes |
 | `findit.github_url` | URL to the source code. | No |
-| `findit.icon` | Icon name (maps to `assets/images/{icon}.svg`). | No |
+| `findit.icon` | Icon name (served from `/icons/<hash>.svg` or fallback to `/images/{icon}.svg`). | No |
 
 ### Running findIT
 

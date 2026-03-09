@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 /// Labels: `title`, `url`, `description`, `category`.
 /// Optional labels: `github_url`, `icon`.
 ///
-/// The `icon` label value is treated as a name; it is resolved first via the
-/// icon database, then falls back to `/images/{name}.svg` for bundled icons.
+/// The `icon` label value is treated as a name; it is resolved via the
+/// icon database (served from `/icons/<hash>.<ext>`).
 #[server]
 pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
     use bollard::query_parameters::ListContainersOptionsBuilder;
@@ -51,12 +51,12 @@ pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
             .filter(|v: &&String| !v.is_empty())
             .cloned();
 
-        // Resolve the icon name to a URL path.
-        let icon = if let Some(name) = labels.get("findit.icon").filter(|v| !v.is_empty()) {
-            Some(resolve_icon_path(&pool, name).await)
-        } else {
-            None
-        };
+// Resolve the icon name to a URL path (from icon database, no fallback).
+    let icon = if let Some(name) = labels.get("findit.icon").filter(|v| !v.is_empty()) {
+        resolve_icon_path(&pool, name).await
+    } else {
+        None
+    };
 
         let service = Service {
             title: title.clone(),
@@ -87,16 +87,9 @@ pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
 }
 
 /// Resolve an icon name to a browser-accessible URL path.
-///
-/// Lookup order:
-/// 1. Database (covers both seeded bundled icons and admin-uploaded icons).
-/// 2. Fallback to `/images/{name}.svg` (legacy bundled path).
+/// Returns the path from the icon database, or None if not found.
 #[cfg(not(target_arch = "wasm32"))]
-async fn resolve_icon_path(pool: &sqlx::SqlitePool, name: &str) -> String {
+async fn resolve_icon_path(pool: &sqlx::SqlitePool, name: &str) -> Option<String> {
     use crate::db;
-    if let Some(path) = db::resolve_icon(pool, name).await {
-        path
-    } else {
-        format!("/images/{name}.svg")
-    }
+    db::resolve_icon(pool, name).await
 }

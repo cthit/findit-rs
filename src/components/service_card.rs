@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn ServiceCard(service: Service) -> Element {
-    // `service.icon` now holds the fully-resolved URL path (e.g. /data/icons/<hash>.svg
-    // or /images/name.svg), resolved server-side.  Fall back to the service favicon.
+    // `service.icon` now holds the fully-resolved URL path (e.g. /icons/<hash>.svg
+    // resolved server-side. Fall back to the service favicon.
     let icon_src = service
         .icon
         .unwrap_or_else(|| format!("{}/favicon.ico", service.url));

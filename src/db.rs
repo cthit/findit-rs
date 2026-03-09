@@ -27,12 +27,15 @@ pub fn icons_dir() -> PathBuf {
 }
 
 /// URL prefix under which icons are served by the browser.
-pub const ICONS_URL_PREFIX: &str = "/data/icons";
+pub const ICONS_URL_PREFIX: &str = "/icons";
 
 /// Initialise the database: create directories, run migrations, seed existing icons.
 /// Stores the pool in a process-global so server functions can call `db::pool()`.
 pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
     // Ensure ./data and ./data/icons directories exist.
+    fs::create_dir_all("./data")
+        .await
+        .expect("Failed to create ./data directory");
     fs::create_dir_all(icons_dir())
         .await
         .expect("Failed to create ./data/icons directory");
@@ -71,17 +74,8 @@ pub fn sha256_hex(data: &[u8]) -> String {
     hex::encode(hasher.finalize())
 }
 
-/// Map a sqlx row to an IconRecord.
-fn row_to_icon(row: sqlx::sqlite::SqliteRow) -> IconRecord {
-    IconRecord {
-        id: row.get("id"),
-        name: row.get("name"),
-        path: row.get("path"),
-    }
-}
-
 /// Copy a bundled image into /data/icons using its hash as the filename, then
-/// insert a record into the DB (idempotent via INSERT OR IGNORE).
+/// insert a record into the DB with just the filename (idempotent via INSERT OR IGNORE).
 async fn seed_existing_icons(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     // The bundled SVG icons that ship with the application.
     let bundled: &[&str] = &[
@@ -119,10 +113,9 @@ async fn seed_existing_icons(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             Err(_) => continue,
         };
 
-        let hash = sha256_hex(&data);
-        let dest_filename = format!("{hash}.svg");
-        let dest_path = icons_dir().join(&dest_filename);
-        let url_path = format!("{ICONS_URL_PREFIX}/{dest_filename}");
+let hash = sha256_hex(&data);
+    let dest_filename = format!("{hash}.svg");
+    let dest_path = icons_dir().join(&dest_filename);
 
         // Copy file only if it doesn't already exist.
         if !dest_path.exists() {
@@ -131,12 +124,12 @@ async fn seed_existing_icons(pool: &SqlitePool) -> Result<(), sqlx::Error> {
                 .unwrap_or_else(|e| panic!("Failed to copy {source:?} to {dest_path:?}: {e}"));
         }
 
-        // Insert or ignore so re-runs are idempotent.
-        sqlx::query("INSERT OR IGNORE INTO icons (name, path) VALUES (?, ?)")
-            .bind(name)
-            .bind(&url_path)
-            .execute(pool)
-            .await?;
+// Insert or ignore so re-runs are idempotent. Store just the filename.
+    sqlx::query("INSERT OR IGNORE INTO icons (name, path) VALUES (?, ?)")
+        .bind(name)
+        .bind(&dest_filename)
+        .execute(pool)
+        .await?;
     }
 
     Ok(())
@@ -144,15 +137,25 @@ async fn seed_existing_icons(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
 // ── CRUD helpers ─────────────────────────────────────────────────────────────
 
-/// Return all icon records ordered by name.
+/// Return all icon records ordered by name. The path includes the full URL prefix.
 pub async fn list_icons(pool: &SqlitePool) -> Result<Vec<IconRecord>, sqlx::Error> {
     let rows = sqlx::query("SELECT id, name, path FROM icons ORDER BY name ASC")
         .fetch_all(pool)
         .await?;
-    Ok(rows.into_iter().map(row_to_icon).collect())
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let id: i64 = row.get("id");
+            let name: String = row.get("name");
+            let filename: String = row.get("path");
+            let path = format!("{}/{filename}", ICONS_URL_PREFIX);
+            IconRecord { id, name, path }
+        })
+        .collect())
 }
 
 /// Look up the URL path for a named icon. Returns `None` if not found.
+/// The stored path is just the filename; this prepends the URL prefix.
 pub async fn resolve_icon(pool: &SqlitePool, name: &str) -> Option<String> {
     sqlx::query("SELECT path FROM icons WHERE name = ?")
         .bind(name)
@@ -160,20 +163,27 @@ pub async fn resolve_icon(pool: &SqlitePool, name: &str) -> Option<String> {
         .await
         .ok()
         .flatten()
-        .map(|row: sqlx::sqlite::SqliteRow| row.get("path"))
+        .map(|row: sqlx::sqlite::SqliteRow| {
+            let filename: String = row.get("path");
+            format!("{}/{filename}", ICONS_URL_PREFIX)
+        })
 }
 
-/// Fetch a single icon record by id.
+/// Fetch a single icon record by id. Returns path with full URL prefix.
 async fn get_icon_by_id(pool: &SqlitePool, id: i64) -> Result<IconRecord, sqlx::Error> {
     let row = sqlx::query("SELECT id, name, path FROM icons WHERE id = ?")
         .bind(id)
         .fetch_one(pool)
         .await?;
-    Ok(row_to_icon(row))
+    let id: i64 = row.get("id");
+    let name: String = row.get("name");
+    let filename: String = row.get("path");
+    let path = format!("{}/{}", ICONS_URL_PREFIX, filename);
+    Ok(IconRecord { id, name, path })
 }
 
-/// Persist `data` bytes to /data/icons/<hash>.<ext> and insert a new row.
-/// Returns an error if `name` is already taken.
+/// Persist `data` bytes to ./data/icons/<hash>.<ext> and insert a new row.
+/// Returns an error if `name` is already taken. Stores just the filename.
 pub async fn add_icon(
     pool: &SqlitePool,
     name: &str,
@@ -183,7 +193,6 @@ pub async fn add_icon(
     let hash = sha256_hex(data);
     let dest_filename = format!("{hash}.{extension}");
     let dest_path = icons_dir().join(&dest_filename);
-    let url_path = format!("{ICONS_URL_PREFIX}/{dest_filename}");
 
     // Write file (no-op if an identical file already exists at this hash path).
     if !dest_path.exists() {
@@ -196,11 +205,13 @@ pub async fn add_icon(
         "INSERT INTO icons (name, path) VALUES (?, ?) RETURNING id, name, path",
     )
     .bind(name)
-    .bind(&url_path)
+    .bind(&dest_filename)
     .fetch_one(pool)
     .await?;
 
-    Ok(row_to_icon(row))
+    let id: i64 = row.get("id");
+    let path = format!("{}/{}", ICONS_URL_PREFIX, &dest_filename);
+    Ok(IconRecord { id, name: name.to_owned(), path })
 }
 
 /// Update an existing icon row. Optionally rename and/or replace the image.
@@ -210,34 +221,40 @@ pub async fn update_icon(
     new_name: Option<&str>,
     new_data: Option<(&[u8], &str)>, // (bytes, extension)
 ) -> Result<IconRecord, sqlx::Error> {
-    // Fetch current record.
+    // Fetch current record to get the stored filename.
     let current = get_icon_by_id(pool, id).await?;
+    // Extract just the filename from the stored path
+    let current_filename = current
+        .path
+        .strip_prefix(&format!("{}/", ICONS_URL_PREFIX))
+        .unwrap_or(&current.path)
+        .to_string();
 
     let name = new_name.unwrap_or(&current.name).to_owned();
 
-    let path = if let Some((data, ext)) = new_data {
+    let filename = if let Some((data, ext)) = new_data {
         let hash = sha256_hex(data);
         let dest_filename = format!("{hash}.{ext}");
         let dest_path = icons_dir().join(&dest_filename);
-        let url_path = format!("{ICONS_URL_PREFIX}/{dest_filename}");
 
         if !dest_path.exists() {
             fs::write(&dest_path, data)
                 .await
                 .map_err(sqlx::Error::Io)?;
         }
-        url_path
+        dest_filename
     } else {
-        current.path.clone()
+        current_filename
     };
 
     sqlx::query("UPDATE icons SET name = ?, path = ? WHERE id = ?")
         .bind(&name)
-        .bind(&path)
+        .bind(&filename)
         .bind(id)
         .execute(pool)
         .await?;
 
+    let path = format!("{}/{}", ICONS_URL_PREFIX, &filename);
     Ok(IconRecord { id, name, path })
 }
 

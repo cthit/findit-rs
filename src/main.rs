@@ -38,11 +38,11 @@ async fn server_main() {
     let port = dioxus::cli_config::server_port().unwrap_or(8080);
     let address = std::net::SocketAddr::new(ip, port);
 
-    // Build the Axum router, prepending the /data/icons static file handler
+    // Build the Axum router, prepending the /icons static file handler
     // before the Dioxus fallback so uploaded icons are served from disk.
     let router = dioxus::server::axum::Router::new()
         .nest_service(
-            "/data/icons",
+            "/icons",
             tower_http::services::ServeDir::new("./data/icons"),
         )
         .serve_dioxus_application(config, App);

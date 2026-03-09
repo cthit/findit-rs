@@ -6,7 +6,7 @@ pub struct Service {
     pub url: String,
     pub description: String,
     pub github_url: Option<String>,
-    /// Resolved URL path to the icon (e.g. /data/icons/<hash>.svg or /images/name.svg)
+    /// Resolved URL path to the icon (e.g. /icons/<hash>.svg)
     pub icon: Option<String>,
 }
 
@@ -21,6 +21,6 @@ pub struct IconRecord {
     pub id: i64,
     /// Unique display name for the icon (used in findit.icon Docker label)
     pub name: String,
-    /// URL path served to the browser, e.g. /data/icons/<sha256>.svg
+    /// URL path served to the browser, e.g. /icons/<sha256>.svg
     pub path: String,
 }
