@@ -9,11 +9,16 @@ edition = "2021"
 [dependencies]
 dioxus = { version = "0.7.1", features = ["router", "fullstack"] }
 serde = { version = "1.0.228", features = ["derive"] }
-web-sys = { version = "0.3.70", features = ["Window", "Location"] }
+web-sys = { version = "0.3.70", features = ["Window", "Location", "File", "FileReader", "FileList", "HtmlInputElement", "Blob"] }
+base64 = "0.22"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 bollard = "0.20"
 tokio = { version = "1.50.0", features = ["full"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls", "macros"] }
+sha2 = "0.10"
+hex = "0.4"
+tower-http = { version = "0.6", features = ["fs"] }
 
 [features]
 default = ["web"]

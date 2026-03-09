@@ -1,10 +1,13 @@
 use crate::models::{Category, Service};
-use dioxus::{fullstack::headers::Server, prelude::*};
+use dioxus::prelude::*;
 
 /// Fetches services from Docker containers with `findit.enable=true`.
 ///
 /// Labels: `title`, `url`, `description`, `category`.
 /// Optional labels: `github_url`, `icon`.
+///
+/// The `icon` label value is treated as a name; it is resolved first via the
+/// icon database, then falls back to `/images/{name}.svg` for bundled icons.
 #[server]
 pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
     use bollard::query_parameters::ListContainersOptionsBuilder;
@@ -23,6 +26,9 @@ pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
         .list_containers(Some(options))
         .await
         .map_err(|e| ServerFnError::new(format!("Failed to list containers: {e}")))?;
+
+    // Acquire DB pool for icon resolution.
+    let pool = crate::db::pool();
 
     // Group services by category
     let mut categories: HashMap<String, Vec<Service>> = HashMap::new();
@@ -45,10 +51,12 @@ pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
             .filter(|v: &&String| !v.is_empty())
             .cloned();
 
-        let icon = labels
-            .get("findit.icon")
-            .filter(|v: &&String| !v.is_empty())
-            .cloned();
+        // Resolve the icon name to a URL path.
+        let icon = if let Some(name) = labels.get("findit.icon").filter(|v| !v.is_empty()) {
+            Some(resolve_icon_path(&pool, name).await)
+        } else {
+            None
+        };
 
         let service = Service {
             title: title.clone(),
@@ -76,4 +84,19 @@ pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
     result.sort_by(|a, b| a.category.to_lowercase().cmp(&b.category.to_lowercase()));
 
     Ok(result)
+}
+
+/// Resolve an icon name to a browser-accessible URL path.
+///
+/// Lookup order:
+/// 1. Database (covers both seeded bundled icons and admin-uploaded icons).
+/// 2. Fallback to `/images/{name}.svg` (legacy bundled path).
+#[cfg(not(target_arch = "wasm32"))]
+async fn resolve_icon_path(pool: &sqlx::SqlitePool, name: &str) -> String {
+    use crate::db;
+    if let Some(path) = db::resolve_icon(pool, name).await {
+        path
+    } else {
+        format!("/images/{name}.svg")
+    }
 }
