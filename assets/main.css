@@ -1,58 +1,72 @@
 /* CSS Custom Properties (Theming) */
-:root { /* light theme */
+:root {
+  /* light theme */
   --highlight1: #034078;
   --highlight2: #034078;
   --highlight1-hover: #22d9e5;
   --highlight2-hover: #81e1eb;
-  
+
   --background: #ffffff;
-  --site-background: #f9fafb; /* light-grey */
-  
-  --text: #1f2937; /* slate-800 */
-  --text-muted: #4b5563; /* slate-600 */
-  
-  --nav-bg: rgba(255, 255, 255, 0.85); /* Translucent */
+  --site-background: #f9fafb;
+  /* light-grey */
+
+  --text: #1f2937;
+  /* slate-800 */
+  --text-muted: #4b5563;
+  /* slate-600 */
+
+  --nav-bg: rgba(255, 255, 255, 0.85);
+  /* Translucent */
   --navtext: #1f2937;
-  
+
   --card-bg: #ffffff;
-  --card-border: #e5e7eb; /* slate-200 */
+  --card-border: #e5e7eb;
+  /* slate-200 */
   --btn-bg: var(--highlight1);
   --btn-hover: var(--highlight1-hover);
   --btn-text: #ffffff;
-  
+
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  
+
   --icon-filter: none;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root { /* dark theme */
+  :root {
+    /* dark theme */
     --highlight1: #44aedb;
     --highlight2: #2191fb;
     --highlight1-hover: #22d9e5;
     --highlight2-hover: #0171db;
-    
-    --background: #111827; /* gray-900 */
-    --site-background: #030712; /* gray-950 */
-    
-    --text: #f9fafb; /* gray-50 */
-    --text-muted: #9ca3af; /* gray-400 */
-    
+
+    --background: #111827;
+    /* gray-900 */
+    --site-background: #030712;
+    /* gray-950 */
+
+    --text: #f9fafb;
+    /* gray-50 */
+    --text-muted: #9ca3af;
+    /* gray-400 */
+
     --nav-bg: rgba(17, 24, 39, 0.85);
     --navtext: var(--text);
-    
-    --card-bg: #1f2937; /* gray-800 */
-    --card-border: #374151; /* gray-700 */
-    --btn-bg: var(--highlight2); /* Lighter blue for dark mode contrast */
+
+    --card-bg: #1f2937;
+    /* gray-800 */
+    --card-border: #374151;
+    /* gray-700 */
+    --btn-bg: var(--highlight2);
+    /* Lighter blue for dark mode contrast */
     --btn-hover: var(--highlight2-hover);
     --btn-text: #ffffff;
-    
+
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
     --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
-    
+
     --icon-filter: invert(0.8) sepia(1) hue-rotate(180deg) saturate(300%) brightness(0.9);
   }
 }
@@ -63,26 +77,31 @@
   src: url(/fonts/source_sans_pro/SourceSansPro-ExtraLight.ttf) format("truetype");
   font-weight: 200;
 }
+
 @font-face {
   font-family: "SourceSansPro";
   src: url(/fonts/source_sans_pro/SourceSansPro-Light.ttf) format("truetype");
   font-weight: 300;
 }
+
 @font-face {
   font-family: "SourceSansPro";
   src: url(/fonts/source_sans_pro/SourceSansPro-Regular.ttf) format("truetype");
   font-weight: 400;
 }
+
 @font-face {
   font-family: "SourceSansPro";
   src: url(/fonts/source_sans_pro/SourceSansPro-SemiBold.ttf) format("truetype");
   font-weight: 600;
 }
+
 @font-face {
   font-family: "SourceSansPro";
   src: url(/fonts/source_sans_pro/SourceSansPro-Bold.ttf) format("truetype");
   font-weight: 700;
 }
+
 @font-face {
   font-family: "SourceSansPro";
   src: url(/fonts/source_sans_pro/SourceSansPro-Black.ttf) format("truetype");
@@ -98,7 +117,9 @@ html {
   scroll-behavior: smooth;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: inherit;
   margin: 0;
   padding: 0;
@@ -211,8 +232,13 @@ a:hover {
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 .header-links-mobile a {
@@ -253,7 +279,8 @@ a:hover {
 
 .category-anchor {
   position: relative;
-  top: -5rem; /* Offset for sticky header */
+  top: -5rem;
+  /* Offset for sticky header */
 }
 
 .category-title {
@@ -320,7 +347,8 @@ a:hover {
   font-size: 1rem;
   line-height: 1.5;
   margin-bottom: 1.5rem;
-  flex-grow: 1; /* Pushes footer down */
+  flex-grow: 1;
+  /* Pushes footer down */
 }
 
 /* Card Footer (Buttons/Links) */
@@ -328,7 +356,8 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  margin-top: auto; /* Pushed to bottom by flex-grow on description */
+  margin-top: auto;
+  /* Pushed to bottom by flex-grow on description */
   padding-top: 1rem;
   border-top: 1px solid var(--card-border);
 }
@@ -392,7 +421,8 @@ a:hover {
 .error-icon {
   width: 5rem;
   height: 5rem;
-  color: #ef4444; /* red-500 */
+  color: #ef4444;
+  /* red-500 */
   margin-bottom: 1.5rem;
 }
 
@@ -451,7 +481,9 @@ a:hover {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-message {
@@ -586,7 +618,7 @@ a:hover {
   border-radius: 999px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin-left: -1rem; /* tuck it next to the title */
+  margin-left: 0.5rem;
 }
 
 .admin-nav-back {
@@ -713,7 +745,8 @@ a:hover {
 /* ── File picker ─────────────────────────────────────────────────────────── */
 
 .admin-file-input {
-  display: none; /* hidden; triggered by the label */
+  display: none;
+  /* hidden; triggered by the label */
 }
 
 .admin-file-label {
@@ -879,7 +912,8 @@ a:hover {
 .admin-icon-card--editing {
   border-color: var(--highlight1);
   background: var(--glass-bg-strong);
-  grid-column: span 2; /* give editing card more room */
+  grid-column: span 2;
+  /* give editing card more room */
 }
 
 @media only screen and (max-width: 600px) {
