@@ -1,42 +1,69 @@
+#![cfg_attr(not(feature = "server"), allow(dead_code))]
+
 use crate::models::{Category, Service};
 use dioxus::prelude::*;
 
-/// Fetches services from Docker containers with `findit.enable=true`.
-///
-/// Labels: `title`, `url`, `description`, `category`.
-/// Optional labels: `github_url`, `icon`.
-///
-/// The `icon` label value is treated as a name; it is resolved via the
-/// icon database (served from `/icons/<hash>.<ext>`).
 #[server]
 pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
+    use std::collections::HashMap;
+
+    let pool = crate::db::pool();
+    let mut categories = HashMap::<String, Vec<Service>>::new();
+
+    for (category, service) in load_docker_services(pool).await? {
+        categories.entry(category).or_default().push(service);
+    }
+
+    for (category, service) in load_manual_services(pool).await? {
+        categories.entry(category).or_default().push(service);
+    }
+
+    let mut result: Vec<Category> = categories
+        .into_iter()
+        .map(|(category, mut services)| {
+            services.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+            Category { category, services }
+        })
+        .collect();
+
+    result.sort_by(|a, b| a.category.to_lowercase().cmp(&b.category.to_lowercase()));
+    Ok(result)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn load_docker_services(
+    pool: &sqlx::SqlitePool,
+) -> Result<Vec<(String, Service)>, ServerFnError> {
     use bollard::query_parameters::ListContainersOptionsBuilder;
     use bollard::Docker;
     use std::collections::HashMap;
 
-    let docker = Docker::connect_with_local_defaults()
-        .map_err(|e| ServerFnError::new(format!("Failed to connect to Docker: {e}")))?;
+    let docker = match Docker::connect_with_local_defaults() {
+        Ok(docker) => docker,
+        Err(err) => {
+            eprintln!("Docker unavailable while loading services: {err}");
+            return Ok(Vec::new());
+        }
+    };
 
     let options = ListContainersOptionsBuilder::default()
-        .all(false) // only running containers
+        .all(false)
         .filters(&HashMap::from([("label", vec!["findit.enable=true"])]))
         .build();
 
-    let containers = docker
-        .list_containers(Some(options))
-        .await
-        .map_err(|e| ServerFnError::new(format!("Failed to list containers: {e}")))?;
+    let containers = match docker.list_containers(Some(options)).await {
+        Ok(containers) => containers,
+        Err(err) => {
+            eprintln!("Failed to list Docker services: {err}");
+            return Ok(Vec::new());
+        }
+    };
 
-    // Acquire DB pool for icon resolution.
-    let pool = crate::db::pool();
-
-    // Group services by category
-    let mut categories: HashMap<String, Vec<Service>> = HashMap::new();
+    let mut services = Vec::new();
 
     for container in containers {
         let labels = container.labels.unwrap_or_default();
 
-        // Skip containers missing any required label
         let (Some(title), Some(url), Some(description), Some(category)) = (
             labels.get("findit.title"),
             labels.get("findit.url"),
@@ -48,48 +75,50 @@ pub async fn get_services() -> Result<Vec<Category>, ServerFnError> {
 
         let github_url = labels
             .get("findit.github_url")
-            .filter(|v: &&String| !v.is_empty())
+            .filter(|value| !value.is_empty())
             .cloned();
 
-// Resolve the icon name to a URL path (from icon database, no fallback).
-    let icon = if let Some(name) = labels.get("findit.icon").filter(|v| !v.is_empty()) {
-        resolve_icon_path(&pool, name).await
-    } else {
-        None
-    };
-
-        let service = Service {
-            title: title.clone(),
-            url: url.clone(),
-            description: description.clone(),
-            github_url,
-            icon,
+        let icon = match labels.get("findit.icon").filter(|value| !value.is_empty()) {
+            Some(name) => crate::db::resolve_icon(pool, name).await,
+            None => None,
         };
 
-        categories
-            .entry(category.clone())
-            .or_default()
-            .push(service);
+        services.push((
+            category.clone(),
+            Service {
+                title: title.clone(),
+                url: url.clone(),
+                description: description.clone(),
+                github_url,
+                icon,
+            },
+        ));
     }
 
-    // Sort categories alphabetically and collect into Vec<Category>
-    let mut result: Vec<Category> = categories
-        .into_iter()
-        .map(|(category, mut services)| {
-            services.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
-            Category { category, services }
-        })
-        .collect();
-
-    result.sort_by(|a, b| a.category.to_lowercase().cmp(&b.category.to_lowercase()));
-
-    Ok(result)
+    Ok(services)
 }
 
-/// Resolve an icon name to a browser-accessible URL path.
-/// Returns the path from the icon database, or None if not found.
 #[cfg(not(target_arch = "wasm32"))]
-async fn resolve_icon_path(pool: &sqlx::SqlitePool, name: &str) -> Option<String> {
-    use crate::db;
-    db::resolve_icon(pool, name).await
+async fn load_manual_services(
+    pool: &sqlx::SqlitePool,
+) -> Result<Vec<(String, Service)>, ServerFnError> {
+    let records = crate::db::list_manual_services(pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("DB error: {e}")))?;
+
+    Ok(records
+        .into_iter()
+        .map(|record| {
+            let category = record.category.clone();
+            let service = Service {
+                title: record.title,
+                url: record.url,
+                description: record.description,
+                github_url: record.github_url.filter(|value| !value.is_empty()),
+                icon: record.icon_path,
+            };
+
+            (category, service)
+        })
+        .collect())
 }

@@ -11,7 +11,7 @@ pub fn Header(categories: Vec<Category>) -> Element {
 
             div { class: "header-links-desktop",
                 for cat in categories.clone() {
-                    a { href: "#{cat.category}", "{cat.category}" }
+                    a { href: "#{category_anchor_id(&cat.category)}", "{cat.category}" }
                 }
             }
 
@@ -37,7 +37,7 @@ pub fn Header(categories: Vec<Category>) -> Element {
                 div { class: "header-links-mobile",
                     for cat in categories {
                         a {
-                            href: "#{cat.category}",
+                            href: "#{category_anchor_id(&cat.category)}",
                             onclick: move |_| show_nav.set(false),
                             "{cat.category}"
                         }
@@ -45,5 +45,27 @@ pub fn Header(categories: Vec<Category>) -> Element {
                 }
             }
         }
+    }
+}
+
+fn category_anchor_id(category: &str) -> String {
+    let mut slug = String::with_capacity(category.len());
+    let mut last_was_dash = false;
+
+    for ch in category.chars().flat_map(char::to_lowercase) {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch);
+            last_was_dash = false;
+        } else if !last_was_dash {
+            slug.push('-');
+            last_was_dash = true;
+        }
+    }
+
+    let slug = slug.trim_matches('-').to_string();
+    if slug.is_empty() {
+        "category".to_string()
+    } else {
+        format!("category-{slug}")
     }
 }

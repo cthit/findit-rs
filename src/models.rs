@@ -24,3 +24,16 @@ pub struct IconRecord {
     /// URL path served to the browser, e.g. /icons/<sha256>.svg
     pub path: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ManualServiceRecord {
+    pub id: i64,
+    pub title: String,
+    pub url: String,
+    pub description: String,
+    pub category: String,
+    pub github_url: Option<String>,
+    pub icon_id: Option<i64>,
+    pub icon_name: Option<String>,
+    pub icon_path: Option<String>,
+}

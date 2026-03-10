@@ -4,7 +4,7 @@ findIT is a service discovery tool for finding various IT division services that
 
 ## How it works
 
-The application queries the local Docker socket for running containers that have specific labels. It groups these services by category and displays them in a web interface.
+The application queries the local Docker socket for running containers that have specific labels, and it also supports manually managed services through the admin panel. It groups all services by category and displays them in a web interface.
 
 ## Usage
 
@@ -20,7 +20,14 @@ To make a service appear in findIT, add the following labels to your Docker cont
 | `findit.description` | A brief description of the service. | Yes |
 | `findit.category` | The category to group the service under. | Yes |
 | `findit.github_url` | URL to the source code. | No |
-| `findit.icon` | Icon name (served from `/icons/<hash>.svg` or fallback to `/images/{icon}.svg`). | No |
+| `findit.icon` | Icon name from the shared icon library. | No |
+
+### Manual Services
+
+If a service cannot be discovered through Docker, you can add it from the admin panel at `/admin`.
+
+- Manual services support the same fields as Docker labels: title, URL, description, category, optional GitHub URL, and optional icon.
+- Icons are selected from the shared icon library managed in the same admin panel.
 
 ### Running findIT
 

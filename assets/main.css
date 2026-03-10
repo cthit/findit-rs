@@ -674,6 +674,103 @@ a:hover {
   box-shadow: var(--glass-shadow);
 }
 
+.admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--highlight1);
+}
+
+.admin-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+
+.admin-overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  border-radius: 0.875rem;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-subtle);
+}
+
+.admin-overview-label,
+.admin-overview-meta {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.admin-overview-value {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text);
+}
+
+.admin-hero-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.admin-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+
+.admin-guide-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 100%;
+  padding: 1rem;
+  border-radius: 0.875rem;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-subtle);
+}
+
+.admin-guide-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--highlight1), var(--highlight2));
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.admin-guide-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.admin-guide-text,
+.admin-panel-subtitle {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .admin-panel-title {
   font-size: 1.125rem;
   font-weight: 700;
@@ -691,10 +788,19 @@ a:hover {
   gap: 1.25rem;
 }
 
+.admin-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .admin-form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.admin-form-group--wide {
+  grid-column: 1 / -1;
 }
 
 .admin-label {
@@ -717,6 +823,15 @@ a:hover {
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
+}
+
+.admin-textarea {
+  resize: vertical;
+  min-height: 8rem;
+}
+
+.admin-select {
+  appearance: none;
 }
 
 .admin-input:focus {
@@ -865,6 +980,35 @@ a:hover {
   padding: 3rem 1rem;
 }
 
+.admin-inline-link {
+  font-size: 0.9rem;
+}
+
+.admin-service-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-inline-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 0.25rem;
+}
+
+.admin-inline-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  filter: var(--icon-filter);
+}
+
+.admin-inline-icon-name {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
 .admin-loading {
   display: flex;
   flex-direction: column;
@@ -878,6 +1022,12 @@ a:hover {
 .admin-icon-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.admin-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
 }
 
@@ -964,6 +1114,139 @@ a:hover {
   gap: 0.75rem;
 }
 
+.admin-service-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 1rem;
+  box-shadow: var(--glass-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+}
+
+.admin-service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow-hover);
+  border-color: var(--highlight1);
+}
+
+.admin-service-card--editing {
+  border-color: var(--highlight1);
+  background: var(--glass-bg-strong);
+  grid-column: span 2;
+}
+
+.admin-service-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.admin-service-avatar {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.875rem;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.admin-service-avatar-img {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  filter: var(--icon-filter);
+}
+
+.admin-service-avatar-fallback {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--highlight1);
+}
+
+.admin-service-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-service-topline {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-service-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.admin-service-category {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-subtle);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--highlight1);
+}
+
+.admin-service-url {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-service-body,
+.admin-service-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.admin-service-description {
+  color: var(--text-muted);
+}
+
+.admin-service-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-service-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-subtle);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.admin-service-links {
+  display: flex;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
 /* ── Delete confirmation ─────────────────────────────────────────────────── */
 
 .admin-delete-confirm {
@@ -977,4 +1260,21 @@ a:hover {
   font-weight: 600;
   color: #ef4444;
   text-align: center;
+}
+
+@media only screen and (max-width: 900px) {
+  .admin-guide-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media only screen and (max-width: 700px) {
+  .admin-overview-grid,
+  .admin-service-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-service-card--editing {
+    grid-column: span 1;
+  }
 }

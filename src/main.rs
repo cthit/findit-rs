@@ -26,9 +26,7 @@ async fn server_main() {
     use dioxus::server::{DioxusRouterExt, ServeConfig};
 
     // Initialise the database; pool is stored in a process-global in db.rs.
-    db::init_db()
-        .await
-        .expect("Failed to initialise database");
+    db::init_db().await.expect("Failed to initialise database");
 
     let config = ServeConfig::default();
 

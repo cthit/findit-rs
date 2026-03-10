@@ -11,6 +11,7 @@ dioxus = { version = "0.7.1", features = ["router", "fullstack"] }
 serde = { version = "1.0.228", features = ["derive"] }
 web-sys = { version = "0.3.70", features = ["Window", "Location", "File", "FileReader", "FileList", "HtmlInputElement", "Blob"] }
 base64 = "0.22"
+url = "2.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 bollard = "0.20"

@@ -1,10 +1,15 @@
+#![cfg_attr(not(feature = "server"), allow(dead_code))]
+
 use sha2::{Digest, Sha256};
-use sqlx::{Row, SqlitePool, sqlite::SqlitePoolOptions};
+use sqlx::{
+    sqlite::{SqliteConnection, SqlitePoolOptions},
+    Row, SqlitePool,
+};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use tokio::fs;
 
-use crate::models::IconRecord;
+use crate::models::{IconRecord, ManualServiceRecord};
 
 /// Process-global connection pool, initialised once at startup.
 static POOL: OnceLock<SqlitePool> = OnceLock::new();
@@ -13,7 +18,8 @@ static POOL: OnceLock<SqlitePool> = OnceLock::new();
 ///
 /// Panics if `init_db()` has not been called yet.
 pub fn pool() -> &'static SqlitePool {
-    POOL.get().expect("DB pool not initialised — call init_db() first")
+    POOL.get()
+        .expect("DB pool not initialised — call init_db() first")
 }
 
 /// Path to the SQLite database file.
@@ -43,6 +49,14 @@ pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
     let db_url = format!("sqlite://{}?mode=rwc", db_path().display());
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
+        .after_connect(|conn: &mut SqliteConnection, _meta| {
+            Box::pin(async move {
+                sqlx::query("PRAGMA foreign_keys = ON")
+                    .execute(conn)
+                    .await?;
+                Ok(())
+            })
+        })
         .connect(&db_url)
         .await?;
 
@@ -54,6 +68,25 @@ pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
             name       TEXT    NOT NULL UNIQUE,
             path       TEXT    NOT NULL,
             created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS manual_services (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            title       TEXT    NOT NULL,
+            url         TEXT    NOT NULL,
+            description TEXT    NOT NULL,
+            category    TEXT    NOT NULL,
+            github_url  TEXT,
+            icon_id     INTEGER,
+            created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+            updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (icon_id) REFERENCES icons (id) ON DELETE SET NULL
         )
         "#,
     )
@@ -113,9 +146,9 @@ async fn seed_existing_icons(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             Err(_) => continue,
         };
 
-let hash = sha256_hex(&data);
-    let dest_filename = format!("{hash}.svg");
-    let dest_path = icons_dir().join(&dest_filename);
+        let hash = sha256_hex(&data);
+        let dest_filename = format!("{hash}.svg");
+        let dest_path = icons_dir().join(&dest_filename);
 
         // Copy file only if it doesn't already exist.
         if !dest_path.exists() {
@@ -124,12 +157,12 @@ let hash = sha256_hex(&data);
                 .unwrap_or_else(|e| panic!("Failed to copy {source:?} to {dest_path:?}: {e}"));
         }
 
-// Insert or ignore so re-runs are idempotent. Store just the filename.
-    sqlx::query("INSERT OR IGNORE INTO icons (name, path) VALUES (?, ?)")
-        .bind(name)
-        .bind(&dest_filename)
-        .execute(pool)
-        .await?;
+        // Insert or ignore so re-runs are idempotent. Store just the filename.
+        sqlx::query("INSERT OR IGNORE INTO icons (name, path) VALUES (?, ?)")
+            .bind(name)
+            .bind(&dest_filename)
+            .execute(pool)
+            .await?;
     }
 
     Ok(())
@@ -196,22 +229,22 @@ pub async fn add_icon(
 
     // Write file (no-op if an identical file already exists at this hash path).
     if !dest_path.exists() {
-        fs::write(&dest_path, data)
-            .await
-            .map_err(sqlx::Error::Io)?;
+        fs::write(&dest_path, data).await.map_err(sqlx::Error::Io)?;
     }
 
-    let row = sqlx::query(
-        "INSERT INTO icons (name, path) VALUES (?, ?) RETURNING id, name, path",
-    )
-    .bind(name)
-    .bind(&dest_filename)
-    .fetch_one(pool)
-    .await?;
+    let row = sqlx::query("INSERT INTO icons (name, path) VALUES (?, ?) RETURNING id, name, path")
+        .bind(name)
+        .bind(&dest_filename)
+        .fetch_one(pool)
+        .await?;
 
     let id: i64 = row.get("id");
     let path = format!("{}/{}", ICONS_URL_PREFIX, &dest_filename);
-    Ok(IconRecord { id, name: name.to_owned(), path })
+    Ok(IconRecord {
+        id,
+        name: name.to_owned(),
+        path,
+    })
 }
 
 /// Update an existing icon row. Optionally rename and/or replace the image.
@@ -238,9 +271,7 @@ pub async fn update_icon(
         let dest_path = icons_dir().join(&dest_filename);
 
         if !dest_path.exists() {
-            fs::write(&dest_path, data)
-                .await
-                .map_err(sqlx::Error::Io)?;
+            fs::write(&dest_path, data).await.map_err(sqlx::Error::Io)?;
         }
         dest_filename
     } else {
@@ -262,6 +293,161 @@ pub async fn update_icon(
 /// (another icon may reference the same hash).
 pub async fn delete_icon(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
     sqlx::query("DELETE FROM icons WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn icon_exists(pool: &SqlitePool, id: i64) -> Result<bool, sqlx::Error> {
+    let row = sqlx::query("SELECT EXISTS(SELECT 1 FROM icons WHERE id = ?) AS present")
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+
+    let present: i64 = row.get("present");
+    Ok(present != 0)
+}
+
+fn map_manual_service_row(row: sqlx::sqlite::SqliteRow) -> ManualServiceRecord {
+    let icon_filename: Option<String> = row.get("icon_path");
+    let icon_path = icon_filename.map(|filename| format!("{}/{}", ICONS_URL_PREFIX, filename));
+
+    ManualServiceRecord {
+        id: row.get("id"),
+        title: row.get("title"),
+        url: row.get("url"),
+        description: row.get("description"),
+        category: row.get("category"),
+        github_url: row.get("github_url"),
+        icon_id: row.get("icon_id"),
+        icon_name: row.get("icon_name"),
+        icon_path,
+    }
+}
+
+async fn get_manual_service_by_id(
+    pool: &SqlitePool,
+    id: i64,
+) -> Result<ManualServiceRecord, sqlx::Error> {
+    let row = sqlx::query(
+        r#"
+        SELECT
+            manual_services.id,
+            manual_services.title,
+            manual_services.url,
+            manual_services.description,
+            manual_services.category,
+            manual_services.github_url,
+            manual_services.icon_id,
+            icons.name AS icon_name,
+            icons.path AS icon_path
+        FROM manual_services
+        LEFT JOIN icons ON icons.id = manual_services.icon_id
+        WHERE manual_services.id = ?
+        "#,
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(map_manual_service_row(row))
+}
+
+pub async fn list_manual_services(
+    pool: &SqlitePool,
+) -> Result<Vec<ManualServiceRecord>, sqlx::Error> {
+    let rows = sqlx::query(
+        r#"
+        SELECT
+            manual_services.id,
+            manual_services.title,
+            manual_services.url,
+            manual_services.description,
+            manual_services.category,
+            manual_services.github_url,
+            manual_services.icon_id,
+            icons.name AS icon_name,
+            icons.path AS icon_path
+        FROM manual_services
+        LEFT JOIN icons ON icons.id = manual_services.icon_id
+        ORDER BY lower(manual_services.category) ASC, lower(manual_services.title) ASC
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows.into_iter().map(map_manual_service_row).collect())
+}
+
+pub async fn add_manual_service(
+    pool: &SqlitePool,
+    title: &str,
+    url: &str,
+    description: &str,
+    category: &str,
+    github_url: Option<&str>,
+    icon_id: Option<i64>,
+) -> Result<ManualServiceRecord, sqlx::Error> {
+    let row = sqlx::query(
+        r#"
+        INSERT INTO manual_services (title, url, description, category, github_url, icon_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+        RETURNING id
+        "#,
+    )
+    .bind(title)
+    .bind(url)
+    .bind(description)
+    .bind(category)
+    .bind(github_url)
+    .bind(icon_id)
+    .fetch_one(pool)
+    .await?;
+
+    let id: i64 = row.get("id");
+    get_manual_service_by_id(pool, id).await
+}
+
+pub async fn update_manual_service(
+    pool: &SqlitePool,
+    id: i64,
+    title: &str,
+    url: &str,
+    description: &str,
+    category: &str,
+    github_url: Option<&str>,
+    icon_id: Option<i64>,
+) -> Result<ManualServiceRecord, sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE manual_services
+        SET
+            title = ?,
+            url = ?,
+            description = ?,
+            category = ?,
+            github_url = ?,
+            icon_id = ?,
+            updated_at = datetime('now')
+        WHERE id = ?
+        "#,
+    )
+    .bind(title)
+    .bind(url)
+    .bind(description)
+    .bind(category)
+    .bind(github_url)
+    .bind(icon_id)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    get_manual_service_by_id(pool, id).await
+}
+
+pub async fn delete_manual_service(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM manual_services WHERE id = ?")
         .bind(id)
         .execute(pool)
         .await?;
