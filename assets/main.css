@@ -71,49 +71,13 @@
   }
 }
 
-/* Fonts */
-@font-face {
-  font-family: "SourceSansPro";
-  src: url(/fonts/source_sans_pro/SourceSansPro-ExtraLight.ttf) format("truetype");
-  font-weight: 200;
-}
-
-@font-face {
-  font-family: "SourceSansPro";
-  src: url(/fonts/source_sans_pro/SourceSansPro-Light.ttf) format("truetype");
-  font-weight: 300;
-}
-
-@font-face {
-  font-family: "SourceSansPro";
-  src: url(/fonts/source_sans_pro/SourceSansPro-Regular.ttf) format("truetype");
-  font-weight: 400;
-}
-
-@font-face {
-  font-family: "SourceSansPro";
-  src: url(/fonts/source_sans_pro/SourceSansPro-SemiBold.ttf) format("truetype");
-  font-weight: 600;
-}
-
-@font-face {
-  font-family: "SourceSansPro";
-  src: url(/fonts/source_sans_pro/SourceSansPro-Bold.ttf) format("truetype");
-  font-weight: 700;
-}
-
-@font-face {
-  font-family: "SourceSansPro";
-  src: url(/fonts/source_sans_pro/SourceSansPro-Black.ttf) format("truetype");
-  font-weight: 900;
-}
 
 /* Global Reset & Base Styles */
 html {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "SourceSansPro", -apple-system, system-ui, sans-serif;
+  font-family: -apple-system, system-ui, sans-serif;
   scroll-behavior: smooth;
 }
 

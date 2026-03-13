@@ -8,11 +8,14 @@ pub async fn get_auth_status() -> Result<AuthStatus, ServerFnError> {
     #[cfg(feature = "server")]
     {
         let session = server::require_optional_session().await?;
-        return Ok(AuthStatus {
+        let status = AuthStatus {
             authenticated: session.is_some(),
             display_name: session.clone().and_then(|session| session.display_name),
             is_admin: session.map_or(false, |session| session.is_admin),
-        });
+        };
+        println!("[Auth] Checked status: authenticated={}, admin={}, user={:?}", 
+            status.authenticated, status.is_admin, status.display_name);
+        return Ok(status);
     }
 
     #[allow(unreachable_code)]
@@ -227,7 +230,7 @@ pub mod server {
 
         let mut removal = Cookie::new(auth_state.cookie_name.clone(), String::new());
         removal.set_path("/");
-        Ok((jar.remove(removal), Redirect::to("/login")).into_response())
+        Ok((jar.remove(removal), Redirect::to("/")).into_response())
     }
 
     pub async fn require_authenticated_request() -> Result<AuthSession, ServerFnError> {
