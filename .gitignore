@@ -11,3 +11,6 @@
 
 # Nix stuff
 .direnv/**/*
+
+# Config
+.env

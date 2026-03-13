@@ -22,14 +22,9 @@ pub fn pool() -> &'static SqlitePool {
         .expect("DB pool not initialised — call init_db() first")
 }
 
-/// Path to the SQLite database file.
-pub fn db_path() -> PathBuf {
-    PathBuf::from("./data/data.db")
-}
-
 /// Directory where uploaded icons are stored on disk.
 pub fn icons_dir() -> PathBuf {
-    PathBuf::from("./data/icons")
+    PathBuf::from(&crate::config::get().icons_dir)
 }
 
 /// URL prefix under which icons are served by the browser.
@@ -38,15 +33,29 @@ pub const ICONS_URL_PREFIX: &str = "/icons";
 /// Initialise the database: create directories, run migrations, seed existing icons.
 /// Stores the pool in a process-global so server functions can call `db::pool()`.
 pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
-    // Ensure ./data and ./data/icons directories exist.
-    fs::create_dir_all("./data")
-        .await
-        .expect("Failed to create ./data directory");
+    let conf = crate::config::get();
+
+    // Ensure icon directory exists
     fs::create_dir_all(icons_dir())
         .await
-        .expect("Failed to create ./data/icons directory");
+        .expect("Failed to create icons directory");
 
-    let db_url = format!("sqlite://{}?mode=rwc", db_path().display());
+    // Extract path from sqlite:// or sqlite: file scheme to ensure parent directory exists
+    let sqlite_path = conf
+        .database_url
+        .strip_prefix("sqlite://")
+        .or_else(|| conf.database_url.strip_prefix("sqlite:"));
+    if let Some(path_str) = sqlite_path {
+        let path_str = path_str.split('?').next().unwrap_or(path_str);
+        if let Some(parent) = PathBuf::from(path_str).parent() {
+            if parent != Path::new("") && !parent.exists() {
+                fs::create_dir_all(parent)
+                    .await
+                    .expect("Failed to create db parent directory");
+            }
+        }
+    }
+
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .after_connect(|conn: &mut SqliteConnection, _meta| {
@@ -57,7 +66,7 @@ pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
                 Ok(())
             })
         })
-        .connect(&db_url)
+        .connect(&conf.database_url)
         .await?;
 
     // Run schema migration.
