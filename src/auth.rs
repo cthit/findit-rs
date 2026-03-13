@@ -13,8 +13,6 @@ pub async fn get_auth_status() -> Result<AuthStatus, ServerFnError> {
             display_name: session.clone().and_then(|session| session.display_name),
             is_admin: session.map_or(false, |session| session.is_admin),
         };
-        println!("[Auth] Checked status: authenticated={}, admin={}, user={:?}", 
-            status.authenticated, status.is_admin, status.display_name);
         return Ok(status);
     }
 
@@ -195,10 +193,7 @@ pub mod server {
         let is_admin = if !admin_groups.is_empty() {
             check_if_admin(&auth_state, &subject, admin_groups)
                 .await
-                .unwrap_or_else(|e| {
-                    eprintln!("Failed to check Gamma admin status: {}", e);
-                    false
-                })
+                .unwrap_or(false)
         } else {
             false
         };
@@ -369,13 +364,6 @@ pub mod server {
             .map_err(|err| format!("Failed to reach Gamma token endpoint: {err}"))?;
 
         let status = response.status();
-        let final_url = response.url().to_string();
-        let content_type = response
-            .headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("<none>")
-            .to_string();
         let body = response
             .text()
             .await
@@ -484,11 +472,9 @@ pub mod server {
         let user_info: GammaUserInfoWithGroups = serde_json::from_str(&body)
             .map_err(|err| format!("Failed to parse Gamma groups response: {err}"))?;
 
-        println!("[Auth] User {} belongs to Gamma superGroups:", uuid);
         let mut is_admin = false;
         for member in &user_info.groups {
             if let Some(super_group) = &member.group.super_group {
-                println!("  - {}", super_group.name);
                 if admin_groups.iter().any(|ag| ag == &super_group.name) {
                     is_admin = true;
                 }

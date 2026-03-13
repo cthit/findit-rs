@@ -35,13 +35,13 @@ FROM scratch
 WORKDIR /app
 
 # Copy server binary from the build stage 
+COPY --from=builder /etc/ssl /etc/ssl
 COPY --from=builder /app/target/dx/find-it/release/web/find-it ./find-it
 # Copy static files
 COPY --from=builder /app/target/dx/find-it/release/web/public ./public
-# For some reason images are not in the public folder, so we need to copy them separately
-COPY --from=builder /app/assets/images ./public/images/
 
 ENV IP=0.0.0.0
 ENV PORT=8080
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 ENTRYPOINT ["/app/find-it"]

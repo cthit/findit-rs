@@ -146,10 +146,6 @@ pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
         .execute(&pool)
         .await?;
 
-    let _ = sqlx::query("ALTER TABLE auth_sessions ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0")
-        .execute(&pool)
-        .await;
-
     // Seed existing bundled SVGs from assets/images/.
     seed_existing_icons(&pool).await?;
 

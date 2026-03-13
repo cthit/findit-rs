@@ -9,7 +9,7 @@ pub fn Home() -> Element {
 
     let categories = match categories.value()() {
         Some(Ok(cats)) => cats,
-        Some(Err(e)) => {
+        Some(Err(_e)) => {
             return rsx! {
                 div { class: "app-container",
                     div { class: "error-container",

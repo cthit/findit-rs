@@ -40,8 +40,7 @@ async fn load_docker_services(
 
     let docker = match Docker::connect_with_local_defaults() {
         Ok(docker) => docker,
-        Err(err) => {
-            eprintln!("Docker unavailable while loading services: {err}");
+        Err(_) => {
             return Ok(Vec::new());
         }
     };
@@ -53,8 +52,7 @@ async fn load_docker_services(
 
     let containers = match docker.list_containers(Some(options)).await {
         Ok(containers) => containers,
-        Err(err) => {
-            eprintln!("Failed to list Docker services: {err}");
+        Err(_) => {
             return Ok(Vec::new());
         }
     };
