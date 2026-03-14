@@ -2034,7 +2034,7 @@ dependencies = [
 
 [[package]]
 name = "find-it"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "axum",
  "axum-extra 0.12.5",

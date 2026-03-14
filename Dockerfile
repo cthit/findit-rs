@@ -1,6 +1,6 @@
 FROM rust:1.93-alpine AS builder
 
-RUN apk add --no-cache musl-dev build-base pkgconfig openssl-dev openssl-libs-static ca-certificates
+RUN apk add --no-cache musl-dev build-base pkgconfig openssl-dev openssl-libs-static ca-certificates binaryen
 
 RUN cargo install dioxus-cli@0.7.1 
 
@@ -25,7 +25,7 @@ COPY assets ./assets/
 RUN touch src/main.rs
 
 # Build using the Dioxus CLI, which will handle both the Rust backend and the WebAssembly frontend
-RUN dx build --release
+RUN dx build --release --verbose
 
 ##########################
 #    PRODUCTION STAGE    #
