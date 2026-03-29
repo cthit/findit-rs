@@ -583,7 +583,7 @@ a:hover {
 }
 
 .admin-toolbar-title {
-  font-size: 1.125rem;
+  font-size: 1.875rem;
   font-weight: 700;
   color: var(--text);
   margin: 0;
@@ -934,7 +934,7 @@ a:hover {
 }
 
 .admin-icon-name {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text);
   text-align: center;
@@ -996,8 +996,8 @@ a:hover {
 }
 
 .admin-service-avatar-img {
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   object-fit: contain;
   filter: var(--icon-filter);
 }
@@ -1023,7 +1023,7 @@ a:hover {
 }
 
 .admin-service-title {
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--text);
 }
