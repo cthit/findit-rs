@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::api::get_services;
-use crate::components::{CategoryList, Header};
+use crate::components::{CategoryList, Footer, Header};
 
 #[component]
 pub fn Home() -> Element {
@@ -105,6 +105,8 @@ pub fn Home() -> Element {
                     }
                 }
             }
+
+            Footer {}
         }
     }
 }

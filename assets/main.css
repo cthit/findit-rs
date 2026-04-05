@@ -110,7 +110,7 @@ a:hover {
 
 /* App Container */
 .app-container {
-  padding-bottom: 5rem;
+  padding-bottom: 0;
 }
 
 /* Header */
@@ -1200,4 +1200,49 @@ a:hover {
   justify-content: flex-end;
   padding-top: 0.75rem;
   border-top: 1px solid var(--card-border);
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────────── */
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  border-top: 1px solid rgba(229, 231, 235, 0.3);
+  padding: 1.5rem 2rem;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .footer-container {
+    border-top-color: rgba(55, 65, 81, 0.3);
+  }
+}
+
+.footer-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.footer-text a {
+  color: var(--highlight1-hover);
+  font-weight: 600;
+  transition: opacity 0.2s ease;
+  text-decoration: none;
+}
+
+.footer-text a:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+@media only screen and (max-width: 900px) {
+  .footer-container {
+    padding: 1rem;
+  }
+
+  .footer-text {
+    font-size: 0.8rem;
+  }
 }
