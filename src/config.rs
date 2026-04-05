@@ -22,6 +22,10 @@ pub struct Config {
     pub database_url: String,
     #[serde(default = "default_icons_dir")]
     pub icons_dir: String,
+    #[serde(default = "default_docker_cache_ttl_seconds")]
+    pub docker_cache_ttl_seconds: u64,
+    #[serde(default = "default_docker_cache_retry_seconds")]
+    pub docker_cache_retry_seconds: u64,
     #[serde(default = "default_oidc_issuer_url")]
     pub oidc_issuer_url: String,
     #[serde(default)]
@@ -57,6 +61,14 @@ fn default_database_url() -> String {
 #[cfg(not(target_arch = "wasm32"))]
 fn default_icons_dir() -> String {
     "./data/icons".to_string()
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn default_docker_cache_ttl_seconds() -> u64 {
+    5
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn default_docker_cache_retry_seconds() -> u64 {
+    2
 }
 #[cfg(not(target_arch = "wasm32"))]
 fn default_oidc_issuer_url() -> String {
@@ -101,6 +113,12 @@ impl Config {
             database_url: env_or_dotenv("DATABASE_URL", &dotenv)
                 .unwrap_or_else(default_database_url),
             icons_dir: env_or_dotenv("ICONS_DIR", &dotenv).unwrap_or_else(default_icons_dir),
+            docker_cache_ttl_seconds: env_or_dotenv("DOCKER_CACHE_TTL_SECONDS", &dotenv)
+                .and_then(|value| value.parse().ok())
+                .unwrap_or_else(default_docker_cache_ttl_seconds),
+            docker_cache_retry_seconds: env_or_dotenv("DOCKER_CACHE_RETRY_SECONDS", &dotenv)
+                .and_then(|value| value.parse().ok())
+                .unwrap_or_else(default_docker_cache_retry_seconds),
             oidc_issuer_url: env_or_dotenv("OIDC_ISSUER_URL", &dotenv)
                 .unwrap_or_else(default_oidc_issuer_url),
             oidc_client_id: env_or_dotenv("OIDC_CLIENT_ID", &dotenv).unwrap_or_default(),
@@ -150,6 +168,14 @@ impl Config {
         assert!(
             !config.gamma_api_key.trim().is_empty(),
             "Missing GAMMA_API_KEY configuration"
+        );
+        assert!(
+            config.docker_cache_ttl_seconds > 0,
+            "DOCKER_CACHE_TTL_SECONDS must be greater than zero"
+        );
+        assert!(
+            config.docker_cache_retry_seconds > 0,
+            "DOCKER_CACHE_RETRY_SECONDS must be greater than zero"
         );
         CONFIG.set(config).expect("Config already initialized");
         Ok(get())
