@@ -2,6 +2,8 @@ mod admin_api;
 mod api;
 mod app;
 mod auth;
+#[cfg(not(target_arch = "wasm32"))]
+mod cache;
 mod components;
 pub mod config;
 mod models;

@@ -244,19 +244,23 @@ pub async fn list_icons(pool: &SqlitePool) -> Result<Vec<IconRecord>, sqlx::Erro
         .collect())
 }
 
-/// Look up the URL path for a named icon. Returns `None` if not found.
-/// The stored path is just the filename; this prepends the URL prefix.
-pub async fn resolve_icon(pool: &SqlitePool, name: &str) -> Option<String> {
-    sqlx::query("SELECT path FROM icons WHERE name = ?")
-        .bind(name)
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten()
-        .map(|row: sqlx::sqlite::SqliteRow| {
+/// Return all icon paths keyed by their display name.
+pub async fn list_icon_paths_by_name(
+    pool: &SqlitePool,
+) -> Result<std::collections::HashMap<String, String>, sqlx::Error> {
+    let rows = sqlx::query("SELECT name, path FROM icons ORDER BY name ASC")
+        .fetch_all(pool)
+        .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let name: String = row.get("name");
             let filename: String = row.get("path");
-            format!("{}/{filename}", ICONS_URL_PREFIX)
+            let path = format!("{}/{filename}", ICONS_URL_PREFIX);
+            (name, path)
         })
+        .collect())
 }
 
 /// Fetch a single icon record by id. Returns path with full URL prefix.

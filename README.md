@@ -53,6 +53,11 @@ Optional authentication variables:
 
 - `SESSION_TTL_HOURS` to change how long app sessions remain valid.
 
+Optional Docker cache tuning variables:
+
+- `DOCKER_CACHE_TTL_SECONDS` controls how long Docker-discovered services stay cached before the next refresh. Default: `5`.
+- `DOCKER_CACHE_RETRY_SECONDS` controls how long the server waits after a failed Docker refresh before trying again. Default: `2`.
+
 ### Running findIT
 
 #### Prerequisites
