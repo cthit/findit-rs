@@ -1,31 +1,68 @@
-FROM rust:1.93-alpine AS builder
+FROM rust:1.93-trixie AS client-builder
 
-RUN apk add --no-cache musl-dev build-base pkgconfig openssl-dev openssl-libs-static ca-certificates binaryen
+ARG CARGO_BINSTALL_VERSION=v1.17.9
+ARG DX_VERSION=0.7.3
 
-RUN cargo install dioxus-cli@0.7.1 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    binaryen \
+    ca-certificates \
+    curl \
+    libsqlite3-dev \
+    libssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
-# Add the WebAssembly target for the Dioxus frontend
+RUN curl -fsSL "https://github.com/cargo-bins/cargo-binstall/releases/download/${CARGO_BINSTALL_VERSION}/cargo-binstall-x86_64-unknown-linux-gnu.tgz" \
+    | tar -xz -C /usr/local/cargo/bin cargo-binstall
+
+RUN cargo binstall -y --force "dioxus-cli@${DX_VERSION}"
+
 RUN rustup target add wasm32-unknown-unknown
 
-# Copy the Cargo.toml and Cargo.lock files to leverage Docker's caching mechanism for dependencies
 WORKDIR /app
 COPY Cargo.toml Cargo.lock Dioxus.toml ./
 
-# Build and cache the dependencies
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo fetch
-RUN cargo build --release
 RUN rm src/main.rs
 
-# Copy the actual code files and build the application
 COPY src ./src/
 COPY assets ./assets/
 
-# Update the file date
 RUN touch src/main.rs
+RUN dx build --release --fullstack --force-sequential
 
-# Build using the Dioxus CLI, which will handle both the Rust backend and the WebAssembly frontend
-RUN dx build --release --verbose
+FROM rust:1.93-alpine AS server-builder
+
+RUN apk add --no-cache \
+    build-base \
+    ca-certificates \
+    musl-dev \
+    openssl-dev \
+    openssl-libs-static \
+    pkgconfig \
+    sqlite-dev
+
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo fetch
+RUN cargo build --release --no-default-features --features server
+RUN rm src/main.rs
+
+COPY src ./src/
+COPY assets ./assets/
+
+RUN touch src/main.rs
+RUN cargo build --release --no-default-features --features server
+
+FROM client-builder AS asset-patcher
+
+COPY --from=server-builder /app/target/release/find-it /app/find-it
+
+RUN mkdir -p /app/patched-assets
+RUN dx tools assets /app/find-it /app/patched-assets
 
 ##########################
 #    PRODUCTION STAGE    #
@@ -34,11 +71,10 @@ FROM scratch
 
 WORKDIR /app
 
-# Copy server binary from the build stage 
-COPY --from=builder /etc/ssl /etc/ssl
-COPY --from=builder /app/target/dx/find-it/release/web/find-it ./find-it
-# Copy static files
-COPY --from=builder /app/target/dx/find-it/release/web/public ./public
+COPY --from=server-builder /etc/ssl /etc/ssl
+COPY --from=asset-patcher /app/find-it ./find-it
+COPY --from=client-builder /app/target/dx/find-it/release/web/public ./public
+COPY --from=asset-patcher /app/patched-assets/ ./public/assets/
 
 ENV IP=0.0.0.0
 ENV PORT=8080
