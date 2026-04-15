@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 #[server]
 pub async fn list_icons() -> Result<Vec<IconRecord>, ServerFnError> {
     use crate::db;
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
     db::list_icons(db::pool())
         .await
         .map_err(|e| ServerFnError::new(format!("DB error: {e}")))
@@ -27,7 +27,7 @@ pub async fn add_icon(
     use crate::db;
     use base64::Engine;
 
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
 
     let name = name.trim().to_lowercase();
     if name.is_empty() {
@@ -71,7 +71,7 @@ pub async fn update_icon(
     use crate::db;
     use base64::Engine;
 
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
 
     let name = new_name
         .as_deref()
@@ -116,7 +116,7 @@ pub async fn update_icon(
 #[server]
 pub async fn delete_icon(id: i64) -> Result<(), ServerFnError> {
     use crate::db;
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
     db::delete_icon(db::pool(), id)
         .await
         .map_err(|e| ServerFnError::new(format!("DB error: {e}")))
@@ -125,7 +125,7 @@ pub async fn delete_icon(id: i64) -> Result<(), ServerFnError> {
 #[server]
 pub async fn list_manual_services() -> Result<Vec<ManualServiceRecord>, ServerFnError> {
     use crate::db;
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
     db::list_manual_services(db::pool())
         .await
         .map_err(|e| ServerFnError::new(format!("DB error: {e}")))
@@ -142,7 +142,7 @@ pub async fn add_manual_service(
 ) -> Result<ManualServiceRecord, ServerFnError> {
     use crate::db;
 
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
 
     let input =
         ServiceInput::from_parts(title, url, description, category, github_url, icon_id).await?;
@@ -172,7 +172,7 @@ pub async fn update_manual_service(
 ) -> Result<ManualServiceRecord, ServerFnError> {
     use crate::db;
 
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
 
     let input =
         ServiceInput::from_parts(title, url, description, category, github_url, icon_id).await?;
@@ -194,7 +194,7 @@ pub async fn update_manual_service(
 #[server]
 pub async fn delete_manual_service(id: i64) -> Result<(), ServerFnError> {
     use crate::db;
-    crate::auth::server::require_admin_request().await?;
+    crate::auth::server::require_authenticated_request().await?;
     db::delete_manual_service(db::pool(), id)
         .await
         .map_err(|e| ServerFnError::new(format!("DB error: {e}")))

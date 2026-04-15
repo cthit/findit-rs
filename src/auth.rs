@@ -11,7 +11,6 @@ pub async fn get_auth_status() -> Result<AuthStatus, ServerFnError> {
         let status = AuthStatus {
             authenticated: session.is_some(),
             display_name: session.clone().and_then(|session| session.display_name),
-            is_admin: session.map_or(false, |session| session.is_admin),
         };
         return Ok(status);
     }
@@ -20,7 +19,6 @@ pub async fn get_auth_status() -> Result<AuthStatus, ServerFnError> {
     Ok(AuthStatus {
         authenticated: false,
         display_name: None,
-        is_admin: false,
     })
 }
 
@@ -66,7 +64,6 @@ pub mod server {
     #[derive(Clone, Debug)]
     pub struct AuthSession {
         pub display_name: Option<String>,
-        pub is_admin: bool,
     }
 
     #[derive(Clone, Debug)]
@@ -189,14 +186,6 @@ pub mod server {
             .or(userinfo.email);
 
         let session_token = random_token();
-        let admin_groups = &config::get().gamma_admin_groups;
-        let is_admin = if !admin_groups.is_empty() {
-            check_if_admin(&auth_state, &subject, admin_groups)
-                .await
-                .unwrap_or(false)
-        } else {
-            false
-        };
 
         db::create_auth_session(
             db::pool(),
@@ -204,7 +193,6 @@ pub mod server {
             &subject,
             &issuer,
             display_name.as_deref(),
-            is_admin,
             auth_state.session_ttl_hours,
         )
         .await
@@ -232,14 +220,6 @@ pub mod server {
         require_optional_session()
             .await?
             .ok_or_else(|| ServerFnError::new("Authentication required"))
-    }
-
-    pub async fn require_admin_request() -> Result<AuthSession, ServerFnError> {
-        let session = require_authenticated_request().await?;
-        if !session.is_admin {
-            return Err(ServerFnError::new("Forbidden: Admin access required"));
-        }
-        Ok(session)
     }
 
     pub async fn require_optional_session() -> Result<Option<AuthSession>, ServerFnError> {
@@ -408,80 +388,6 @@ pub mod server {
 
         serde_json::from_str(&body)
             .map_err(|err| format!("Failed to parse Gamma userinfo response: {err}"))
-    }
-
-    #[derive(Deserialize)]
-    struct GammaSuperGroupInfo {
-        name: String,
-    }
-
-    #[derive(Deserialize)]
-    struct GammaGroupInfo {
-        #[serde(rename = "superGroup", default)]
-        super_group: Option<GammaSuperGroupInfo>,
-    }
-
-    #[derive(Deserialize)]
-    struct GammaGroupMember {
-        group: GammaGroupInfo,
-    }
-
-    #[derive(Deserialize)]
-    struct GammaUserInfoWithGroups {
-        groups: Vec<GammaGroupMember>,
-    }
-
-    async fn check_if_admin(
-        auth_state: &AuthState,
-        uuid: &str,
-        admin_groups: &[String],
-    ) -> Result<bool, String> {
-        let url = format!(
-            "{}/api/info/v1/users/{}",
-            config::get().oidc_issuer_url.trim_end_matches('/'),
-            uuid
-        );
-
-        let response = auth_state
-            .oidc_http_client
-            .get(&url)
-            .header(
-                "Authorization",
-                format!(
-                    "pre-shared {}:{}",
-                    config::get().gamma_api_client_id,
-                    config::get().gamma_api_key
-                ),
-            )
-            .header(reqwest::header::ACCEPT, "application/json")
-            .send()
-            .await
-            .map_err(|err| format!("Failed to reach Gamma groups API: {err}"))?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(format!("Gamma groups API returned {status}. Body: {body}"));
-        }
-
-        let body = response
-            .text()
-            .await
-            .map_err(|err| format!("Failed to read Gamma groups API response: {err}"))?;
-
-        let user_info: GammaUserInfoWithGroups = serde_json::from_str(&body)
-            .map_err(|err| format!("Failed to parse Gamma groups response: {err}"))?;
-
-        let mut is_admin = false;
-        for member in &user_info.groups {
-            if let Some(super_group) = &member.group.super_group {
-                if admin_groups.iter().any(|ag| ag == &super_group.name) {
-                    is_admin = true;
-                }
-            }
-        }
-
-        Ok(is_admin)
     }
 
     fn is_secure_cookie() -> bool {

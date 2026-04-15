@@ -38,12 +38,6 @@ pub struct Config {
     pub session_cookie_secret: String,
     #[serde(default = "default_session_ttl_hours")]
     pub session_ttl_hours: i64,
-    #[serde(default = "default_gamma_admin_groups")]
-    pub gamma_admin_groups: Vec<String>,
-    #[serde(default)]
-    pub gamma_api_client_id: String,
-    #[serde(default)]
-    pub gamma_api_key: String,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -81,10 +75,6 @@ fn default_oidc_redirect_url() -> String {
 #[cfg(not(target_arch = "wasm32"))]
 fn default_session_ttl_hours() -> i64 {
     12
-}
-#[cfg(not(target_arch = "wasm32"))]
-fn default_gamma_admin_groups() -> Vec<String> {
-    Vec::new()
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -130,16 +120,6 @@ impl Config {
             session_ttl_hours: env_or_dotenv("SESSION_TTL_HOURS", &dotenv)
                 .and_then(|value| value.parse().ok())
                 .unwrap_or_else(default_session_ttl_hours),
-            gamma_admin_groups: env_or_dotenv("GAMMA_ADMIN_GROUPS", &dotenv)
-                .map(|s| {
-                    s.split(',')
-                        .map(|g| g.trim().to_string())
-                        .filter(|g| !g.is_empty())
-                        .collect()
-                })
-                .unwrap_or_else(default_gamma_admin_groups),
-            gamma_api_client_id: env_or_dotenv("GAMMA_API_CLIENT_ID", &dotenv).unwrap_or_default(),
-            gamma_api_key: env_or_dotenv("GAMMA_API_KEY", &dotenv).unwrap_or_default(),
         };
         assert!(
             !config.oidc_client_id.trim().is_empty(),
@@ -156,18 +136,6 @@ impl Config {
         assert!(
             config.session_ttl_hours > 0,
             "SESSION_TTL_HOURS must be greater than zero"
-        );
-        assert!(
-            !config.gamma_admin_groups.is_empty(),
-            "Missing GAMMA_ADMIN_GROUPS configuration"
-        );
-        assert!(
-            !config.gamma_api_client_id.trim().is_empty(),
-            "Missing GAMMA_API_CLIENT_ID configuration"
-        );
-        assert!(
-            !config.gamma_api_key.trim().is_empty(),
-            "Missing GAMMA_API_KEY configuration"
         );
         assert!(
             config.docker_cache_ttl_seconds > 0,

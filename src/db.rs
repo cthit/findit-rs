@@ -574,7 +574,6 @@ pub async fn create_auth_session(
     subject: &str,
     issuer: &str,
     display_name: Option<&str>,
-    is_admin: bool,
     ttl_hours: i64,
 ) -> Result<(), sqlx::Error> {
     sqlx::query("DELETE FROM auth_sessions WHERE expires_at <= datetime('now')")
@@ -588,17 +587,15 @@ pub async fn create_auth_session(
             subject,
             issuer,
             display_name,
-            is_admin,
             expires_at
         )
-        VALUES (?, ?, ?, ?, ?, datetime('now', ? || ' hours'))
+        VALUES (?, ?, ?, ?, datetime('now', ? || ' hours'))
         "#,
     )
     .bind(sha256_hex(session_token.as_bytes()))
     .bind(subject)
     .bind(issuer)
     .bind(display_name)
-    .bind(is_admin)
     .bind(ttl_hours)
     .execute(pool)
     .await?;
@@ -614,7 +611,7 @@ pub async fn get_auth_session_by_token(
     let token_hash = sha256_hex(session_token.as_bytes());
     let row = sqlx::query(
         r#"
-        SELECT id, subject, issuer, display_name, is_admin
+        SELECT id, subject, issuer, display_name
         FROM auth_sessions
         WHERE session_token_hash = ? AND expires_at > datetime('now')
         "#,
@@ -634,7 +631,6 @@ pub async fn get_auth_session_by_token(
 
     Ok(row.map(|row| AuthSession {
         display_name: row.get("display_name"),
-        is_admin: row.get("is_admin"),
     }))
 }
 

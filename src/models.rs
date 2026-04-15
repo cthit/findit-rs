@@ -42,5 +42,4 @@ pub struct ManualServiceRecord {
 pub struct AuthStatus {
     pub authenticated: bool,
     pub display_name: Option<String>,
-    pub is_admin: bool,
 }
