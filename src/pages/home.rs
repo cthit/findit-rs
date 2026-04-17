@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::api::get_services;
+use crate::server::server_functions::get_services;
 use crate::components::{CategoryList, Footer, Header};
 
 #[component]

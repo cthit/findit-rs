@@ -1,12 +1,70 @@
-use crate::admin_api::{
-    add_icon, add_manual_service, delete_icon, delete_manual_service, list_icons,
+use crate::models::{IconRecord, ManualServiceRecord};
+use crate::server::server_functions::{
+    add_icon, add_manual_service, delete_icon, delete_manual_service, get_auth_status, list_icons,
     list_manual_services, update_icon, update_manual_service,
 };
-use crate::models::{IconRecord, ManualServiceRecord};
 use dioxus::prelude::*;
 
+// ── Route component ───────────────────────────────────────────────────────────
+
 #[component]
-pub fn Admin() -> Element {
+pub fn AdminRoute() -> Element {
+    rsx! {
+        SuspenseBoundary {
+            fallback: |_| rsx! {
+                div { class: "admin-page",
+                    div { class: "loading-container",
+                        div { class: "loading-spinner" }
+                        p { class: "loading-message", "Loading..." }
+                    }
+                }
+            },
+            AdminRouteContent {}
+        }
+    }
+}
+
+#[component]
+fn AdminRouteContent() -> Element {
+    let auth_status = use_server_future(get_auth_status)?;
+
+    match auth_status() {
+        Some(Ok(status)) if status.authenticated => rsx! { Admin {} },
+        Some(Ok(_)) => {
+            // Unauthenticated: redirect to Gamma login via client-side script for immediate effect
+            rsx! {
+                div { class: "admin-page",
+                    div { class: "loading-container",
+                        div { class: "loading-spinner" }
+                        p { class: "loading-message", "Redirecting to login..." }
+                    }
+                    script { "window.location.href = '/auth/login?next=/admin';" }
+                }
+            }
+        }
+        Some(Err(err)) => rsx! {
+            div { class: "admin-page",
+                div { class: "error-container",
+                    h1 { class: "error-title", "Authentication unavailable" }
+                    p { class: "error-message", "Failed to load authentication state: {err}" }
+                }
+            }
+        },
+        _ => rsx! {
+            div { class: "admin-page",
+                div { class: "loading-container",
+                    div { class: "loading-spinner" }
+                    p { class: "loading-message", "Loading..." }
+                }
+            }
+        },
+    }
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+#[component]
+fn Admin() -> Element {
     let mut icons = use_server_future(list_icons)?;
     let mut manual_services = use_server_future(list_manual_services)?;
 
@@ -622,6 +680,8 @@ pub fn Admin() -> Element {
     }
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
 #[component]
 fn ManualServiceFields(
     title: Signal<String>,
@@ -845,6 +905,32 @@ fn IconCard(
     }
 }
 
+#[component]
+fn Modal(title: String, is_open: bool, children: Element, on_close: EventHandler<()>) -> Element {
+    rsx! {
+        if is_open {
+            div { class: "admin-modal-overlay", onclick: move |_| on_close.call(()) }
+            div {
+                class: "admin-modal",
+                onclick: move |e| e.stop_propagation(),
+                div { class: "admin-modal-header",
+                    h2 { class: "admin-modal-title", "{title}" }
+                    button {
+                        class: "admin-modal-close",
+                        onclick: move |_| on_close.call(()),
+                        "×"
+                    }
+                }
+                div { class: "admin-modal-body",
+                    {children}
+                }
+            }
+        }
+    }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 fn validate_service_form(
     title: &str,
     url: &str,
@@ -854,29 +940,21 @@ fn validate_service_form(
     if title.is_empty() {
         return Some("Please enter a title.".into());
     }
-
     if url.is_empty() {
         return Some("Please enter a service URL.".into());
     }
-
     if description.is_empty() {
         return Some("Please enter a description.".into());
     }
-
     if category.is_empty() {
         return Some("Please enter a category.".into());
     }
-
     None
 }
 
 fn optional_string(value: String) -> Option<String> {
     let value = value.trim().to_string();
-    if value.is_empty() {
-        None
-    } else {
-        Some(value)
-    }
+    if value.is_empty() { None } else { Some(value) }
 }
 
 fn selected_icon_value(icon_id: Option<i64>) -> String {
@@ -885,11 +963,7 @@ fn selected_icon_value(icon_id: Option<i64>) -> String {
 
 fn parse_optional_i64(value: &str) -> Option<i64> {
     let value = value.trim();
-    if value.is_empty() {
-        None
-    } else {
-        value.parse().ok()
-    }
+    if value.is_empty() { None } else { value.parse().ok() }
 }
 
 fn read_file_to_signal(
@@ -917,28 +991,4 @@ fn read_file_to_signal(
             }
         }
     });
-}
-
-#[component]
-fn Modal(title: String, is_open: bool, children: Element, on_close: EventHandler<()>) -> Element {
-    rsx! {
-        if is_open {
-            div { class: "admin-modal-overlay", onclick: move |_| on_close.call(()) }
-            div {
-                class: "admin-modal",
-                onclick: move |e| e.stop_propagation(),
-                div { class: "admin-modal-header",
-                    h2 { class: "admin-modal-title", "{title}" }
-                    button {
-                        class: "admin-modal-close",
-                        onclick: move |_| on_close.call(()),
-                        "×"
-                    }
-                }
-                div { class: "admin-modal-body",
-                    {children}
-                }
-            }
-        }
-    }
 }

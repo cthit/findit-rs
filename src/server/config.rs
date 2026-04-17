@@ -1,17 +1,11 @@
 use serde::Deserialize;
-#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
-#[cfg(not(target_arch = "wasm32"))]
 use std::env;
-#[cfg(not(target_arch = "wasm32"))]
 use std::net::IpAddr;
-#[cfg(not(target_arch = "wasm32"))]
 use std::sync::OnceLock;
 
-#[cfg(not(target_arch = "wasm32"))]
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "default_host")]
@@ -40,49 +34,38 @@ pub struct Config {
     pub session_ttl_hours: i64,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn default_host() -> IpAddr {
     "0.0.0.0".parse().unwrap()
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_port() -> u16 {
     8080
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_database_url() -> String {
     "sqlite://./data/data.db?mode=rwc".to_string()
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_icons_dir() -> String {
     "./data/icons".to_string()
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_docker_cache_ttl_seconds() -> u64 {
     5
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_docker_cache_retry_seconds() -> u64 {
     2
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_oidc_issuer_url() -> String {
     "https://auth.chalmers.it".to_string()
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_oidc_redirect_url() -> String {
     "http://localhost:8080/auth/callback".to_string()
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn default_session_ttl_hours() -> i64 {
     12
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub fn get() -> &'static Config {
     CONFIG.get().expect("Configuration not initialized!")
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl Config {
     pub fn init() -> Result<&'static Self, envy::Error> {
         let dotenv = dotenvy::from_filename_iter(".env")
@@ -150,7 +133,6 @@ impl Config {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn env_or_dotenv(key: &str, dotenv: &HashMap<String, String>) -> Option<String> {
     dotenv
         .get(key)

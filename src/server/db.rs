@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "server"), allow(dead_code))]
-
 use sha2::{Digest, Sha256};
 use sqlx::{
     sqlite::{SqliteConnection, SqlitePoolOptions},
@@ -10,9 +8,7 @@ use std::sync::OnceLock;
 use tokio::fs;
 
 use crate::models::{IconRecord, ManualServiceRecord};
-
-#[cfg(feature = "server")]
-use crate::auth::server::AuthSession;
+use crate::server::auth::AuthSession;
 
 /// Process-global connection pool, initialised once at startup.
 static POOL: OnceLock<SqlitePool> = OnceLock::new();
@@ -27,7 +23,7 @@ pub fn pool() -> &'static SqlitePool {
 
 /// Directory where uploaded icons are stored on disk.
 pub fn icons_dir() -> PathBuf {
-    PathBuf::from(&crate::config::get().icons_dir)
+    PathBuf::from(&crate::server::config::get().icons_dir)
 }
 
 /// URL prefix under which icons are served by the browser.
@@ -36,7 +32,7 @@ pub const ICONS_URL_PREFIX: &str = "/icons";
 /// Initialise the database: create directories, run migrations, seed existing icons.
 /// Stores the pool in a process-global so server functions can call `db::pool()`.
 pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
-    let conf = crate::config::get();
+    let conf = crate::server::config::get();
 
     // Ensure icon directory exists
     fs::create_dir_all(icons_dir())
@@ -129,7 +125,6 @@ pub async fn init_db() -> Result<&'static SqlitePool, sqlx::Error> {
             subject            TEXT    NOT NULL,
             issuer             TEXT    NOT NULL,
             display_name       TEXT,
-            is_admin           BOOLEAN NOT NULL DEFAULT 0,
             created_at         TEXT    NOT NULL DEFAULT (datetime('now')),
             expires_at         TEXT    NOT NULL,
             last_seen_at       TEXT    NOT NULL DEFAULT (datetime('now'))
@@ -567,7 +562,6 @@ pub async fn consume_oidc_login_attempt(
     }))
 }
 
-#[cfg(feature = "server")]
 pub async fn create_auth_session(
     pool: &SqlitePool,
     session_token: &str,
@@ -603,7 +597,6 @@ pub async fn create_auth_session(
     Ok(())
 }
 
-#[cfg(feature = "server")]
 pub async fn get_auth_session_by_token(
     pool: &SqlitePool,
     session_token: &str,
