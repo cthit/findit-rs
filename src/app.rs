@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::pages::{admin::AdminRoute, home::Home};
+use crate::pages::{admin::AdminRoute, home::Home, not_found::NotFound};
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
@@ -11,6 +11,8 @@ pub enum Route {
     Home {},
     #[route("/admin")]
     AdminRoute {},
+    #[route("/:..route")]
+    NotFound { route: Vec<String> },
 }
 
 #[component]
